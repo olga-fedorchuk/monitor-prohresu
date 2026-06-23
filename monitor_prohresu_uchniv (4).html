@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Монітор прогресу учнів — Математика онлайн у Чехії</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0F172A;color:#F1F5F9;min-height:100vh}
+.header{background:#111827;border-bottom:1px solid #1E293B;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header h1{color:#F8FAFC;font-size:16px;font-weight:600}
+.header h1 span{color:#22D3EE}
+.badge-hdr{font-size:10px;letter-spacing:1.5px;color:#475569;font-weight:600;text-transform:uppercase}
+.nav{background:#111827;border-bottom:1px solid #1E293B;display:flex;padding:0 20px;overflow-x:auto}
+.nav-btn{padding:11px 16px;font-size:12px;font-weight:500;color:#64748B;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.nav-btn.active{color:#22D3EE;border-bottom-color:#22D3EE}
+.nav-btn:hover:not(.active){color:#CBD5E1}
+.page{display:none;max-width:1120px;margin:0 auto;padding:20px 16px}
+.page.active{display:block}
+.layout{display:grid;grid-template-columns:270px 1fr;gap:16px;align-items:start}
+@media(max-width:780px){.layout{grid-template-columns:1fr}}
+.sidebar{background:#111827;border-radius:12px;border:1px solid #1E293B;overflow:hidden;position:sticky;top:12px}
+.sidebar-sec{padding:12px 14px;border-bottom:1px solid #1E293B}
+.sidebar-sec:last-child{border-bottom:none}
+.sidebar-title{font-size:10px;font-weight:700;color:#475569;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.search-inp{width:100%;padding:7px 10px;background:#0F172A;border:1px solid #1E293B;border-radius:8px;color:#F1F5F9;font-size:12px;outline:none}
+.search-inp:focus{border-color:#3B82F6}
+.search-inp::placeholder{color:#334155}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.chip{padding:3px 9px;border-radius:14px;font-size:11px;cursor:pointer;border:1px solid #1E293B;background:#0F172A;color:#64748B;transition:all .15s;white-space:nowrap}
+.chip.active{background:#1E3A5F;color:#60A5FA;border-color:#1E40AF}
+.chip.active.green{background:#064E3B;color:#34D399;border-color:#065F46}
+.chip.active.purple{background:#2E1B4E;color:#A78BFA;border-color:#4C1D95}
+.chip:hover:not(.active){background:#1E293B}
+.student-list{max-height:420px;overflow-y:auto}
+.student-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #0F172A;transition:all .15s;display:flex;align-items:center;gap:8px;border-left:3px solid transparent}
+.student-item:hover{background:#1E293B}
+.student-item.active{background:#1E3A5F;border-left-color:#3B82F6}
+.s-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#F1F5F9}
+.s-info{flex:1;min-width:0}
+.s-name{font-size:13px;font-weight:500;color:#F1F5F9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-meta{font-size:10px;color:#475569;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-pct{font-size:11px;font-weight:600;flex-shrink:0}
+.card{background:#111827;border-radius:12px;border:1px solid #1E293B;padding:18px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card-title small{font-size:10px;color:#475569;font-weight:400;margin-left:auto;cursor:pointer}
+.card-title small:hover{color:#94A3B8}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric{background:#0F172A;border-radius:10px;padding:14px;text-align:center;border:1px solid #1E293B}
+.metric-label{font-size:10px;color:#475569;margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.metric-value{font-size:22px;font-weight:700}
+.metric-sub{font-size:10px;color:#475569;margin-top:2px}
+.green{color:#34D399}.amber{color:#FBBF24}.red{color:#F87171}.blue{color:#60A5FA}.cyan{color:#22D3EE}
+.btn{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #1E293B;background:#1E293B;color:#CBD5E1;transition:all .15s}
+.btn:hover{background:#334155}
+.btn-primary{background:#3B82F6;color:#fff;border-color:#3B82F6}
+.btn-primary:hover{background:#2563EB}
+.btn-cyan{background:#0E7490;color:#22D3EE;border-color:#0E7490}
+.btn-cyan:hover{background:#0C6880}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-ghost{background:transparent;border-color:#334155;color:#94A3B8}
+.btn-ghost:hover{background:#1E293B;color:#F1F5F9}
+.btn-danger{background:#450A0A;color:#F87171;border-color:#7F1D1D}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+.form-group label{font-size:11px;color:#64748B;display:block;margin-bottom:4px;font-weight:500}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;background:#0F172A;border:1px solid #1E293B;border-radius:8px;color:#F1F5F9;font-size:12px;outline:none;font-family:inherit}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#3B82F6}
+.form-group select option{background:#111827}
+.form-group textarea{resize:vertical;min-height:60px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:0}
+.info-item{background:#0F172A;border-radius:8px;padding:10px 12px;border:1px solid #1E293B}
+.info-item-label{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.info-item-value{font-size:13px;color:#F1F5F9;font-weight:500}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-ind{background:#2D1B4E;color:#A78BFA}
+.tag-group{background:#1B2E1E;color:#34D399}
+.tag-pair{background:#1B2838;color:#22D3EE}
+.tag-cz{background:#1E3A5F;color:#60A5FA}
+.tag-ua{background:#2E2408;color:#FBBF24}
+.tag-exam{background:#3B0A0A;color:#F87171}
+.chart-wrap{position:relative;width:100%;height:260px}
+.chart-wrap-sm{position:relative;width:100%;height:190px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;font-weight:500;font-size:10px;color:#475569;border-bottom:1px solid #1E293B;text-transform:uppercase;letter-spacing:.5px}
+td{padding:9px 10px;border-bottom:1px solid #0F172A;color:#CBD5E1}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#1E293B}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600}
+.badge-green{background:#064E3B;color:#34D399}
+.badge-amber{background:#451A03;color:#FBBF24}
+.badge-red{background:#450A0A;color:#F87171}
+.badge-blue{background:#1E3A5F;color:#60A5FA}
+.badge-gray{background:#1E293B;color:#94A3B8}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:#111827;border-radius:14px;border:1px solid #1E293B;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:15px;font-weight:600;color:#F1F5F9;margin-bottom:18px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.report-card{background:#111827;border-radius:14px;border:1px solid #1E293B;overflow:hidden}
+.report-hdr{background:linear-gradient(135deg,#0F2744,#111827);padding:22px;border-bottom:1px solid #1E293B}
+.report-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1E293B}
+.report-stat{background:#111827;padding:14px;text-align:center}
+.report-stat-val{font-size:24px;font-weight:700;margin-bottom:2px}
+.report-stat-lbl{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.5px}
+.report-body{padding:18px}
+.empty{text-align:center;padding:40px 16px;color:#475569;font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:.3}
+.divider{height:1px;background:#1E293B;margin:14px 0}
+.list-count{font-size:10px;color:#475569;padding:8px 14px 4px;font-weight:500}
+.scrollbar::-webkit-scrollbar{width:4px}
+.scrollbar::-webkit-scrollbar-track{background:#0F172A}
+.scrollbar::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.section-sep{height:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 <span>Монітор прогресу учнів</span></h1>
+  <span class="badge-hdr">Математика онлайн у Чехії</span>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('students',this)">👥 Учні</button>
+  <button class="nav-btn" onclick="showPage('report',this)">📄 Звіт для батьків</button>
+  <button class="nav-btn" onclick="showPage('overview',this)">📊 Загальний огляд</button>
+</div>
+
+<!-- ══ PAGE: УЧНІ ══ -->
+<div id="page-students" class="page active">
+  <div class="layout">
+    <div class="sidebar scrollbar">
+      <div class="sidebar-sec">
+        <div class="sidebar-title">
+          Учні
+          <button class="btn btn-primary btn-sm" onclick="openModal('add')">+ Учень</button>
+        </div>
+        <input class="search-inp" id="search" placeholder="🔍 Пошук за іменем..." oninput="renderList()">
+      </div>
+      <div class="sidebar-sec">
+        <div class="sidebar-title">Програма</div>
+        <div class="chip-row" id="prog-filters">
+          <div class="chip active" data-prog="all" onclick="setFilter('prog',this,'all')">Всі</div>
+          <div class="chip" data-prog="cz" onclick="setFilter('prog',this,'cz')">Чеська</div>
+          <div class="chip" data-prog="ua" onclick="setFilter('prog',this,'ua')">Українська</div>
+        </div>
+      </div>
+      <div class="sidebar-sec">
+        <div class="sidebar-title">Клас</div>
+        <div class="chip-row" id="class-filters"></div>
+      </div>
+      <div class="sidebar-sec">
+        <div class="sidebar-title">Формат</div>
+        <div class="chip-row">
+          <div class="chip active" data-fmt="all" onclick="setFilter('fmt',this,'all')">Всі</div>
+          <div class="chip" data-fmt="ind" onclick="setFilter('fmt',this,'ind')">Індивід.</div>
+          <div class="chip" data-fmt="group" onclick="setFilter('fmt',this,'group')">Група</div>
+          <div class="chip" data-fmt="pair" onclick="setFilter('fmt',this,'pair')">Пара</div>
+        </div>
+      </div>
+      <div class="list-count" id="list-count"></div>
+      <div class="student-list scrollbar" id="student-list"></div>
+    </div>
+
+    <div id="main-panel">
+      <div class="empty"><div class="empty-icon">👆</div>Оберіть учня або додайте нового</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: ЗВІТ ══ -->
+<div id="page-report" class="page">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <select id="report-student" onchange="renderReport()" style="padding:8px 12px;background:#111827;border:1px solid #1E293B;border-radius:8px;color:#F1F5F9;font-size:13px;min-width:200px">
+      <option value="">— Оберіть учня —</option>
+    </select>
+    <button class="btn btn-cyan" onclick="window.print()">🖨 Зберегти / Скрін</button>
+  </div>
+  <div id="report-area"><div class="empty"><div class="empty-icon">📄</div>Оберіть учня для звіту</div></div>
+</div>
+
+<!-- ══ PAGE: ОГЛЯД ══ -->
+<div id="page-overview" class="page">
+  <div class="metrics" id="ov-metrics" style="margin-top:4px"></div>
+  <div class="card">
+    <div class="card-title">📊 Середній % виконання — всі учні</div>
+    <div style="position:relative;width:100%;height:320px"><canvas id="c-ov" role="img" aria-label="Порівняння учнів"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Зведена таблиця</div>
+    <table><thead><tr>
+      <th>Учень</th><th>Програма</th><th>Клас</th><th>Формат</th>
+      <th>Місяців</th><th>Сер. %</th><th>Сер. якість</th><th>Задано</th><th>Виконано</th>
+    </tr></thead><tbody id="ov-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- ══ MODAL: УЧЕНЬ ══ -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2 id="modal-title">Додати учня</h2>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Ім'я та прізвище *</label>
+        <input id="m-name" placeholder="Марія Коваль">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Формат занять *</label>
+        <select id="m-fmt">
+          <option value="ind">👤 Індивідуальний</option>
+          <option value="group">👥 Група</option>
+          <option value="pair">👫 Пара</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Програма *</label>
+        <select id="m-prog" onchange="updateClassOptions()">
+          <option value="cz">🇨🇿 Чеська</option>
+          <option value="ua">🇺🇦 Українська</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Клас / Рівень</label>
+        <select id="m-class"></select>
+      </div>
+      <div class="form-group">
+        <label>Назва групи / пари</label>
+        <input id="m-group" placeholder="Вівторок 17:00">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Час занять</label>
+        <input id="m-time" placeholder="Пн, Ср 16:00">
+      </div>
+      <div class="form-group">
+        <label>Тривалість (хв)</label>
+        <input id="m-duration" type="number" placeholder="60" min="15" max="180">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Нотатки</label>
+      <textarea id="m-notes" placeholder="Слабкі місця, особливості, побажання батьків..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-delete-btn" style="display:none;margin-right:auto" onclick="deleteStudentFromModal()">Видалити учня</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveStudent()">Додати</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem('monitor-v3')||'{}');
+let cur = null;
+let charts = {};
+let filters = {prog:'all', fmt:'all', cls:'all'};
+let editingStudent = null;
+
+const CZ_CLASSES = ['—','4. třída','5. třída','6. třída','7. třída','8. třída','9. třída','Gymnázium','Přijímačky','Maturita'];
+const UA_CLASSES = ['—','4 клас','5 клас','6 клас','7 клас','8 клас','9 клас','НМТ'];
+
+const AVATAR_COLORS = ['#1E3A5F','#1B2E1E','#2D1B4E','#3B1F1F','#1A2E3B','#1B2838','#2E2408','#1E2B1A'];
+function aColor(n){let h=0;for(let c of n)h+=c.charCodeAt(0);return AVATAR_COLORS[h%AVATAR_COLORS.length];}
+function initials(n){return n.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';}
+function pctClass(p){return p>=80?'green':p>=50?'amber':'red';}
+function qClass(q){return q>=8?'green':q>=5?'amber':'red';}
+function fmtLabel(f){return f==='group'?'👥 Група':f==='pair'?'👫 Пара':'👤 Індивід.';}
+function fmtTag(f){return f==='group'?'tag-group':f==='pair'?'tag-pair':'tag-ind';}
+function progLabel(p){return p==='ua'?'🇺🇦 Укр.':'🇨🇿 Чес.';}
+function progTag(p){return p==='ua'?'tag-ua':'tag-cz';}
+
+function save(){localStorage.setItem('monitor-v3',JSON.stringify(data));}
+
+function formatMonth(m){
+  if(!m)return'';
+  const[y,mo]=m.split('-');
+  return['Січ','Лют','Бер','Квіт','Трав','Черв','Лип','Серп','Вер','Жовт','Лист','Груд'][parseInt(mo)-1]+' '+y;
+}
+
+// ── FILTERS ──
+function setFilter(type, el, val){
+  const attr='data-'+type;
+  document.querySelectorAll(`[${attr}]`).forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  filters[type===''?type:type]=val;
+  if(type==='prog'){filters.prog=val; renderClassChips();}
+  if(type==='fmt') filters.fmt=val;
+  if(type==='cls') filters.cls=val;
+  renderList();
+}
+
+function renderClassChips(){
+  const classes = filters.prog==='ua' ? UA_CLASSES : filters.prog==='cz' ? CZ_CLASSES :
+    [...new Set([...CZ_CLASSES,...UA_CLASSES])];
+  const shown = filters.prog==='all'
+    ? ['—','4','5','6','7','8','9','Gym','Příj.','Mat.','НМТ']
+    : (filters.prog==='cz'?['Всі',...CZ_CLASSES.slice(1)]:['Всі',...UA_CLASSES.slice(1)]);
+  const vals  = filters.prog==='all'
+    ? ['all','4','5','6','7','8','9','Gymnázium','Přijímačky','Maturita','НМТ']
+    : (filters.prog==='cz'?['all',...CZ_CLASSES.slice(1)]:['all',...UA_CLASSES.slice(1)]);
+  document.getElementById('class-filters').innerHTML = shown.map((l,i)=>{
+    const v=vals[i]||l;
+    return `<div class="chip${v===filters.cls?' active':''}" data-cls="${v}" onclick="setFilterCls(this,'${v}')">${l==='Всі'?'Всі':l}</div>`;
+  }).join('');
+}
+
+function setFilterCls(el,val){
+  document.querySelectorAll('[data-cls]').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active'); filters.cls=val; renderList();
+}
+
+// ── CLASS OPTIONS ──
+function updateClassOptions(){
+  const prog=document.getElementById('m-prog').value;
+  const classes=prog==='ua'?UA_CLASSES:CZ_CLASSES;
+  document.getElementById('m-class').innerHTML=classes.map(c=>`<option>${c}</option>`).join('');
+}
+
+// ── STUDENT LIST ──
+function renderList(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const names=Object.keys(data).filter(n=>{
+    const s=data[n];
+    if(q&&!n.toLowerCase().includes(q))return false;
+    if(filters.prog!=='all'&&s.prog!==filters.prog)return false;
+    if(filters.fmt!=='all'&&s.fmt!==filters.fmt)return false;
+    if(filters.cls!=='all'){
+      const sc=s.cls||'—';
+      if(filters.cls==='4'&&!sc.startsWith('4'))return false;
+      if(filters.cls==='5'&&!sc.startsWith('5'))return false;
+      if(filters.cls==='6'&&!sc.startsWith('6'))return false;
+      if(filters.cls==='7'&&!sc.startsWith('7'))return false;
+      if(filters.cls==='8'&&!sc.startsWith('8'))return false;
+      if(filters.cls==='9'&&!sc.startsWith('9'))return false;
+      if(!['4','5','6','7','8','9'].includes(filters.cls)&&sc!==filters.cls)return false;
+    }
+    return true;
+  }).sort();
+
+  document.getElementById('list-count').textContent=`${names.length} учн${names.length===1?'ень':'ів'}`;
+
+  document.getElementById('student-list').innerHTML=names.length?names.map(n=>{
+    const s=data[n];
+    const months=Object.keys(s.entries||{}).sort();
+    const last=months.length?s.entries[months[months.length-1]]:null;
+    const pct=last?Math.round(last.done/last.assigned*100):null;
+    return `<div class="student-item${n===cur?' active':''}" onclick="selectStudent('${n.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+      <div class="s-avatar" style="background:${aColor(n)}">${initials(n)}</div>
+      <div class="s-info">
+        <div class="s-name">${n}</div>
+        <div class="s-meta">${s.cls||'—'} · ${fmtLabel(s.fmt||'ind')}</div>
+      </div>
+      ${pct!==null?`<div class="s-pct ${pctClass(pct)}">${pct}%</div>`:''}
+    </div>`;
+  }).join(''):`<div class="empty" style="padding:20px">Нікого не знайдено</div>`;
+}
+
+// ── MODAL ──
+function openModal(mode, name){
+  editingStudent = mode==='edit'?name:null;
+  document.getElementById('modal-title').textContent = mode==='edit'?'Редагувати учня':'Додати учня';
+  document.getElementById('modal-save-btn').textContent = mode==='edit'?'Зберегти':'Додати';
+  document.getElementById('modal-delete-btn').style.display = mode==='edit'?'block':'none';
+  updateClassOptions();
+  if(mode==='edit'&&name){
+    const s=data[name];
+    document.getElementById('m-name').value=name;
+    document.getElementById('m-fmt').value=s.fmt||'ind';
+    document.getElementById('m-prog').value=s.prog||'cz';
+    updateClassOptions();
+    document.getElementById('m-class').value=s.cls||'—';
+    document.getElementById('m-group').value=s.group||'';
+    document.getElementById('m-time').value=s.time||'';
+    document.getElementById('m-duration').value=s.duration||'';
+    document.getElementById('m-notes').value=s.notes||'';
+  } else {
+    document.getElementById('m-name').value='';
+    document.getElementById('m-fmt').value='ind';
+    document.getElementById('m-prog').value='cz';
+    updateClassOptions();
+    document.getElementById('m-class').value='—';
+    document.getElementById('m-group').value='';
+    document.getElementById('m-time').value='';
+    document.getElementById('m-duration').value='';
+    document.getElementById('m-notes').value='';
+  }
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('m-name').focus();
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');editingStudent=null;}
+
+function saveStudent(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){alert("Введіть ім'я");return;}
+  const isEdit=!!editingStudent;
+  if(!isEdit&&data[name]){alert('Учень вже існує');return;}
+  const s={
+    fmt:document.getElementById('m-fmt').value,
+    prog:document.getElementById('m-prog').value,
+    cls:document.getElementById('m-class').value,
+    group:document.getElementById('m-group').value.trim(),
+    time:document.getElementById('m-time').value.trim(),
+    duration:document.getElementById('m-duration').value,
+    notes:document.getElementById('m-notes').value.trim(),
+    entries:isEdit?(data[editingStudent]?.entries||{}):{},
+  };
+  if(isEdit&&editingStudent!==name){
+    delete data[editingStudent];
+    if(cur===editingStudent)cur=name;
+  }
+  data[name]=s;
+  save(); closeModal();
+  renderClassChips(); renderList(); renderReportSelect();
+  selectStudent(name);
+}
+
+function deleteStudentFromModal(){
+  const name=editingStudent;
+  if(!name)return;
+  if(!confirm(`Видалити учня ${name} та всі дані?`))return;
+  delete data[name];
+  if(cur===name){cur=null;document.getElementById('main-panel').innerHTML='<div class="empty"><div class="empty-icon">👆</div>Оберіть учня або додайте нового</div>';}
+  save();closeModal();renderList();renderReportSelect();
+}
+
+// ── SELECT STUDENT ──
+function selectStudent(name){
+  cur=name; renderList(); renderStudentPanel();
+}
+
+// ── STUDENT PANEL ──
+function renderStudentPanel(){
+  const s=data[cur];
+  const entries=s.entries||{};
+  const months=Object.keys(entries).sort();
+  const last=months.length?entries[months[months.length-1]]:null;
+  const pct=last?Math.round(last.done/last.assigned*100):null;
+
+  document.getElementById('main-panel').innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div class="s-avatar" style="background:${aColor(cur)};width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#F1F5F9;flex-shrink:0">${initials(cur)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:17px;font-weight:600;color:#F1F5F9;margin-bottom:6px">${cur}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <span class="tag ${fmtTag(s.fmt||'ind')}">${fmtLabel(s.fmt||'ind')}</span>
+            <span class="tag ${progTag(s.prog||'cz')}">${progLabel(s.prog||'cz')}</span>
+            ${s.cls&&s.cls!=='—'?`<span class="tag tag-cz">${s.cls}</span>`:''}
+            ${s.group?`<span class="tag tag-pair">${s.group}</span>`:''}
+          </div>
+          ${s.time?`<div style="font-size:11px;color:#475569;margin-top:6px">🕐 ${s.time}${s.duration?' · '+s.duration+' хв':''}</div>`:''}
+          ${s.notes?`<div style="font-size:11px;color:#64748B;margin-top:4px;font-style:italic">${s.notes}</div>`:''}
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openModal('edit','${cur.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">✏️ Редагувати</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ Додати дані за місяць</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Місяць</label><input type="month" id="f-month"></div>
+        <div class="form-group"><label>Задано ДЗ</label><input type="number" id="f-assigned" min="0" placeholder="12"></div>
+        <div class="form-group"><label>Виконано ДЗ</label><input type="number" id="f-done" min="0" placeholder="9"></div>
+        <div class="form-group"><label>Якість (1–10)</label><input type="number" id="f-quality" min="1" max="10" placeholder="7"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveEntry()">Зберегти</button>
+    </div>
+
+    ${last?`<div class="metrics">
+      <div class="metric"><div class="metric-label">Задано</div><div class="metric-value blue">${last.assigned}</div><div class="metric-sub">${formatMonth(months[months.length-1])}</div></div>
+      <div class="metric"><div class="metric-label">Виконано</div><div class="metric-value cyan">${last.done}</div><div class="metric-sub">${formatMonth(months[months.length-1])}</div></div>
+      <div class="metric"><div class="metric-label">% виконання</div><div class="metric-value ${pctClass(pct)}">${pct}%</div><div class="metric-sub">останній місяць</div></div>
+      <div class="metric"><div class="metric-label">Якість</div><div class="metric-value ${qClass(last.quality)}">${last.quality}/10</div><div class="metric-sub">останній місяць</div></div>
+    </div>`:''}
+
+    ${months.length>=2?`
+    <div class="card">
+      <div class="card-title">📊 Задано vs Виконано ДЗ</div>
+      <div class="chart-wrap"><canvas id="sc-bar" role="img" aria-label="Динаміка ДЗ"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 % виконання по місяцях</div>
+      <div class="chart-wrap-sm"><canvas id="sc-pct" role="img" aria-label="Відсоток виконання"></canvas></div>
+    </div>`:''}
+
+    ${months.length?`
+    <div class="card">
+      <div class="card-title">📋 Всі записи</div>
+      <table><thead><tr><th>Місяць</th><th>Задано</th><th>Виконано</th><th>%</th><th>Якість</th><th></th></tr></thead>
+      <tbody>${months.slice().reverse().map(m=>{
+        const e=entries[m],p=Math.round(e.done/e.assigned*100);
+        return `<tr><td><strong>${formatMonth(m)}</strong></td><td>${e.assigned}</td><td>${e.done}</td>
+          <td><span class="badge badge-${pctClass(p)}">${p}%</span></td>
+          <td><span class="badge badge-${qClass(e.quality)}">${e.quality}/10</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteEntry('${m}')">✕</button></td></tr>`;
+      }).join('')}</tbody></table>
+    </div>`:''}
+  `;
+
+  const d=new Date();
+  document.getElementById('f-month').value=d.toISOString().slice(0,7);
+
+  if(months.length>=2){
+    const labels=months.map(formatMonth);
+    const assigned=months.map(m=>entries[m].assigned);
+    const done=months.map(m=>entries[m].done);
+    const pcts=months.map(m=>Math.round(entries[m].done/entries[m].assigned*100));
+
+    destroyChart('sc-bar');
+    charts['sc-bar']=new Chart(document.getElementById('sc-bar'),{
+      type:'bar',
+      data:{labels,datasets:[
+        {label:'Задано',data:assigned,backgroundColor:'rgba(59,130,246,0.5)',borderColor:'#3B82F6',borderWidth:1,borderRadius:5,borderSkipped:false},
+        {label:'Виконано',data:done,backgroundColor:'rgba(34,211,238,0.6)',borderColor:'#22D3EE',borderWidth:1,borderRadius:5,borderSkipped:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#64748B',font:{size:11},boxWidth:10}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}},
+        scales:{
+          y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#64748B',font:{size:11}}},
+          x:{grid:{display:false},ticks:{color:'#64748B',font:{size:11},autoSkip:false,maxRotation:30}}}}
+    });
+
+    destroyChart('sc-pct');
+    charts['sc-pct']=new Chart(document.getElementById('sc-pct'),{
+      type:'line',
+      data:{labels,datasets:[{
+        label:'% виконання',data:pcts,
+        borderColor:'#22D3EE',backgroundColor:'rgba(34,211,238,.07)',
+        fill:true,pointRadius:6,
+        pointBackgroundColor:pcts.map(p=>p>=80?'#34D399':p>=50?'#FBBF24':'#F87171'),
+        pointBorderColor:'#0F172A',pointBorderWidth:2,tension:0.4,borderWidth:2.5
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>`${c.raw}%`,afterLabel:c=>{const p=c.raw;return p>=80?'✅ Відмінно':p>=50?'⚠️ Середньо':'❌ Слабо';}}}},
+        scales:{
+          y:{min:0,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#64748B',font:{size:11},callback:v=>v+'%'}},
+          x:{grid:{display:false},ticks:{color:'#64748B',font:{size:11},autoSkip:false,maxRotation:30}}}}
+    });
+  }
+}
+
+function saveEntry(){
+  if(!cur)return;
+  const month=document.getElementById('f-month').value;
+  const assigned=parseInt(document.getElementById('f-assigned').value);
+  const done=parseInt(document.getElementById('f-done').value);
+  const quality=parseInt(document.getElementById('f-quality').value);
+  if(!month||isNaN(assigned)||isNaN(done)||isNaN(quality)){alert('Заповніть всі поля');return;}
+  if(done>assigned){alert('Виконано не може бути більше ніж задано');return;}
+  if(quality<1||quality>10){alert('Якість від 1 до 10');return;}
+  if(!data[cur].entries)data[cur].entries={};
+  data[cur].entries[month]={assigned,done,quality};
+  save();renderList();renderStudentPanel();renderReportSelect();
+}
+
+function deleteEntry(month){
+  if(!confirm('Видалити запис?'))return;
+  delete data[cur].entries[month];
+  save();renderStudentPanel();
+}
+
+// ── REPORT ──
+function renderReportSelect(){
+  const sel=document.getElementById('report-student'),prev=sel.value;
+  sel.innerHTML='<option value="">— Оберіть учня —</option>'+
+    Object.keys(data).sort().map(n=>`<option value="${n}"${n===prev?' selected':''}>${n}</option>`).join('');
+}
+
+function renderReport(){
+  const name=document.getElementById('report-student').value;
+  const area=document.getElementById('report-area');
+  if(!name){area.innerHTML='<div class="empty"><div class="empty-icon">📄</div>Оберіть учня для звіту</div>';return;}
+  const s=data[name],entries=s.entries||{};
+  const months=Object.keys(entries).sort();
+  if(!months.length){area.innerHTML='<div class="empty">Немає даних для звіту</div>';return;}
+  const last=entries[months[months.length-1]];
+  const pct=Math.round(last.done/last.assigned*100);
+  const avgPct=Math.round(months.reduce((a,m)=>a+entries[m].done/entries[m].assigned,0)/months.length*100);
+  const avgQ=(months.reduce((a,m)=>a+entries[m].quality,0)/months.length).toFixed(1);
+
+  area.innerHTML=`
+  <div class="report-card" id="report-print">
+    <div class="report-hdr">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <div style="width:46px;height:46px;border-radius:50%;background:${aColor(name)};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#F1F5F9;flex-shrink:0">${initials(name)}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#F8FAFC">${name}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="tag ${progTag(s.prog||'cz')}">${progLabel(s.prog||'cz')}</span>
+            ${s.cls&&s.cls!=='—'?`<span class="tag tag-cz">${s.cls}</span>`:''}
+            <span class="tag ${fmtTag(s.fmt||'ind')}">${fmtLabel(s.fmt||'ind')}</span>
+            ${s.group?`<span class="tag tag-pair">${s.group}</span>`:''}
+          </div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:10px;color:#22D3EE;letter-spacing:1px;font-weight:600">ЗВІТ</div>
+          <div style="font-size:11px;color:#475569">${formatMonth(months[months.length-1])}</div>
+          ${s.time?`<div style="font-size:10px;color:#475569">🕐 ${s.time}</div>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="report-stats">
+      <div class="report-stat"><div class="report-stat-val ${pctClass(pct)}">${pct}%</div><div class="report-stat-lbl">% виконання (міс.)</div></div>
+      <div class="report-stat"><div class="report-stat-val ${pctClass(avgPct)}">${avgPct}%</div><div class="report-stat-lbl">Середній % (весь час)</div></div>
+      <div class="report-stat"><div class="report-stat-val ${qClass(avgQ)}">${avgQ}/10</div><div class="report-stat-lbl">Середня якість</div></div>
+    </div>
+    <div class="report-body">
+      <div style="font-size:11px;color:#475569;margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Динаміка виконання ДЗ</div>
+      <div style="position:relative;width:100%;height:200px;margin-bottom:20px"><canvas id="r-bar" role="img" aria-label="Динаміка ДЗ для звіту"></canvas></div>
+      <div style="font-size:11px;color:#475569;margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Відсоток виконання — місячна динаміка</div>
+      <div style="position:relative;width:100%;height:160px"><canvas id="r-pct" role="img" aria-label="Відсоток виконання для звіту"></canvas></div>
+    </div>
+  </div>`;
+
+  const labels=months.map(formatMonth);
+  const assigned=months.map(m=>entries[m].assigned);
+  const done=months.map(m=>entries[m].done);
+  const pcts=months.map(m=>Math.round(entries[m].done/entries[m].assigned*100));
+
+  destroyChart('r-bar');
+  charts['r-bar']=new Chart(document.getElementById('r-bar'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Задано',data:assigned,backgroundColor:'rgba(59,130,246,0.45)',borderColor:'#3B82F6',borderWidth:1,borderRadius:6,borderSkipped:false},
+      {label:'Виконано',data:done,backgroundColor:'rgba(34,211,238,0.6)',borderColor:'#22D3EE',borderWidth:1,borderRadius:6,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#64748B',font:{size:11},boxWidth:10}}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#64748B',font:{size:10}}},
+        x:{grid:{display:false},ticks:{color:'#64748B',font:{size:10},autoSkip:false,maxRotation:30}}}}
+  });
+
+  destroyChart('r-pct');
+  charts['r-pct']=new Chart(document.getElementById('r-pct'),{
+    type:'line',
+    data:{labels,datasets:[{
+      label:'% виконання',data:pcts,
+      borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,.08)',
+      fill:true,pointRadius:6,
+      pointBackgroundColor:pcts.map(p=>p>=80?'#34D399':p>=50?'#FBBF24':'#F87171'),
+      pointBorderColor:'#0F172A',pointBorderWidth:2,tension:0.4,borderWidth:2.5
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        datalabels:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.raw}%`}}},
+      scales:{
+        y:{min:0,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#64748B',font:{size:10},callback:v=>v+'%'}},
+        x:{grid:{display:false},ticks:{color:'#64748B',font:{size:10},autoSkip:false,maxRotation:30}}}}
+  });
+}
+
+// ── OVERVIEW ──
+function renderOverview(){
+  const names=Object.keys(data).sort();
+  const stats=names.map(n=>{
+    const s=data[n],e=s.entries||{};
+    const months=Object.keys(e).sort();
+    if(!months.length)return{name:n,...s,count:0,avgPct:0,avgQ:0,total:0,totalDone:0};
+    const avgPct=Math.round(months.reduce((a,m)=>a+e[m].done/e[m].assigned,0)/months.length*100);
+    const avgQ=(months.reduce((a,m)=>a+e[m].quality,0)/months.length).toFixed(1);
+    return{name:n,...s,count:months.length,avgPct,avgQ,
+      total:months.reduce((a,m)=>a+e[m].assigned,0),
+      totalDone:months.reduce((a,m)=>a+e[m].done,0)};
+  }).filter(s=>s.count>0);
+
+  const avg=stats.length?Math.round(stats.reduce((a,s)=>a+s.avgPct,0)/stats.length):0;
+  const best=stats.length?stats.reduce((a,s)=>s.avgPct>a.avgPct?s:a,stats[0]):null;
+
+  document.getElementById('ov-metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Всього учнів</div><div class="metric-value blue">${names.length}</div></div>
+    <div class="metric"><div class="metric-label">Середній %</div><div class="metric-value ${pctClass(avg)}">${avg}%</div></div>
+    <div class="metric"><div class="metric-label">Найкращий</div><div class="metric-value green">${best?best.avgPct+'%':'—'}</div><div class="metric-sub">${best?best.name:''}</div></div>
+    <div class="metric"><div class="metric-label">З даними</div><div class="metric-value blue">${stats.length}</div><div class="metric-sub">з ${names.length}</div></div>
+  `;
+
+  document.getElementById('ov-tbody').innerHTML=stats.map(s=>`<tr>
+    <td><strong>${s.name}</strong></td>
+    <td><span class="tag ${progTag(s.prog||'cz')}">${progLabel(s.prog||'cz')}</span></td>
+    <td>${s.cls&&s.cls!=='—'?`<span class="badge badge-blue">${s.cls}</span>`:'-'}</td>
+    <td><span class="tag ${fmtTag(s.fmt||'ind')}">${fmtLabel(s.fmt||'ind')}</span>${s.group?` <span style="font-size:10px;color:#475569">${s.group}</span>`:''}</td>
+    <td>${s.count}</td>
+    <td><span class="badge badge-${pctClass(s.avgPct)}">${s.avgPct}%</span></td>
+    <td><span class="badge badge-${qClass(s.avgQ)}">${s.avgQ}/10</span></td>
+    <td>${s.total}</td><td>${s.totalDone}</td>
+  </tr>`).join('');
+
+  destroyChart('c-ov');
+  if(stats.length){
+    const sorted=[...stats].sort((a,b)=>b.avgPct-a.avgPct);
+    document.querySelector('#c-ov').parentElement.style.height=Math.max(260,sorted.length*36+60)+'px';
+    charts['c-ov']=new Chart(document.getElementById('c-ov'),{
+      type:'bar',
+      data:{
+        labels:sorted.map(s=>s.name),
+        datasets:[{
+          label:'Сер. % виконання',
+          data:sorted.map(s=>s.avgPct),
+          backgroundColor:sorted.map(s=>s.avgPct>=80?'rgba(52,211,153,.7)':s.avgPct>=50?'rgba(251,191,36,.7)':'rgba(248,113,113,.7)'),
+          borderRadius:5,borderSkipped:false
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw}%`}}},
+        scales:{
+          x:{min:0,max:100,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#64748B',font:{size:11},callback:v=>v+'%'}},
+          y:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:12}}}}}
+    });
+  }
+}
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='overview')renderOverview();
+  if(name==='report')renderReportSelect();
+}
+
+// ── INIT ──
+renderClassChips();
+renderList();
+renderReportSelect();
+if(Object.keys(data).length){
+  cur=Object.keys(data).sort()[0];
+  renderList();
+  renderStudentPanel();
+}
+</script>
+</body>
+</html>
